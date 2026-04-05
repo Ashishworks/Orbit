@@ -34,7 +34,7 @@ export default function RootLayout() {
     >
       <ClerkProvider
         publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-        tokenCache={tokenCache}
+        // tokenCache={tokenCache}
       >
         <Stack screenOptions={{ headerShown: false }} />
       </ClerkProvider>
