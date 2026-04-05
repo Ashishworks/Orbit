@@ -1,9 +1,10 @@
-import {Text, View, TextInput, FlatList} from 'react-native'
-import {SafeAreaView as RNSafeAreaView} from "react-native-safe-area-context";
+import { Text, View, TextInput, FlatList, Image } from 'react-native'
+import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { styled } from "nativewind";
 import { useState } from "react";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { useSubscriptionStore } from "@/lib/subscriptionStore";
+import { icons } from "@/constants/icons";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -13,7 +14,7 @@ const Subscriptions = () => {
     const { subscriptions } = useSubscriptionStore();
 
     const filteredSubscriptions = subscriptions.filter((subscription) =>
-        subscription.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        subscription.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         subscription.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         subscription.plan?.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -25,24 +26,53 @@ const Subscriptions = () => {
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={
                     <View className="px-5 pt-5">
-                        <Text className="text-3xl font-bold text-dark mb-5">Subscriptions</Text>
-                        <TextInput
-                            className="bg-card rounded-xl px-4 py-3 text-dark mb-4"
-                            placeholder="Search subscriptions..."
-                            placeholderTextColor="#666"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
+                        {/* TITLE */}
+                        <Text className="text-3xl font-bold text-primary mb-5">
+                            Subscriptions
+                        </Text>
+
+                        {/* 🔍 SEARCH BAR (IMPROVED UI) */}
+                        <View className="flex-row items-center bg-card rounded-2xl px-4 py-3 mb-4 border border-border">
+                            
+                            {/* Search Icon */}
+                            <Text className="mr-2 text-lg">🔍</Text>
+
+                            {/* Input */}
+                            <TextInput
+                                className="flex-1 text-primary text-base"
+                                placeholder="Search subscriptions..."
+                                placeholderTextColor="#888"
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                cursorColor="#A78BFA"
+                            />
+
+                            {/* Clear Button */}
+                            {searchQuery.length > 0 && (
+                                <Text
+                                    className="text-sm text-muted-foreground ml-2"
+                                    onPress={() => setSearchQuery("")}
+                                >
+                                    ✕
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 }
                 renderItem={({ item }) => (
                     <SubscriptionCard
                         {...item}
                         expanded={expandedId === item.id}
-                        onPress={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                        onPress={() =>
+                            setExpandedId(expandedId === item.id ? null : item.id)
+                        }
                     />
                 )}
-                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, gap: 12 }}
+                contentContainerStyle={{
+                    paddingHorizontal: 20,
+                    paddingBottom: 20,
+                    gap: 12
+                }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
@@ -50,4 +80,5 @@ const Subscriptions = () => {
         </SafeAreaView>
     )
 }
-export default Subscriptions
+
+export default Subscriptions;

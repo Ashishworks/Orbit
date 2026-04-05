@@ -1,30 +1,17 @@
 import { Text, View, Pressable, Image } from 'react-native'
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { styled } from "nativewind";
-import { useClerk, useUser } from '@clerk/expo';
 import images from '@/constants/images';
 import { usePostHog } from 'posthog-react-native';
+
 const SafeAreaView = styled(RNSafeAreaView);
 
 const Settings = () => {
-    const { signOut } = useClerk();
-    const { user } = useUser();
     const posthog = usePostHog();
 
-    const handleSignOut = async () => {
-        posthog.capture('user_signed_out');
-        try {
-            await signOut();
-            // Only reset analytics after successful sign-out
-            posthog.reset();
-        } catch (error) {
-            console.error('Sign-out failed:', error);
-            // Don't reset analytics if sign-out failed
-        }
-    };
-
-    const displayName = user?.firstName || user?.fullName || user?.emailAddresses[0]?.emailAddress || 'User';
-    const email = user?.emailAddresses[0]?.emailAddress;
+    // 👇 Static fallback user
+    const displayName = "Guest User";
+    const email = "guest@example.com";
 
     return (
         <SafeAreaView className="flex-1 bg-background p-5">
@@ -34,14 +21,12 @@ const Settings = () => {
             <View className="auth-card mb-5">
                 <View className="flex-row items-center gap-4 mb-4">
                     <Image
-                        source={user?.imageUrl ? { uri: user.imageUrl } : images.avatar}
+                        source={images.avatar}
                         className="size-16 rounded-full"
                     />
                     <View className="flex-1">
                         <Text className="text-lg font-sans-bold text-primary">{displayName}</Text>
-                        {email && (
-                            <Text className="text-sm font-sans-medium text-muted-foreground">{email}</Text>
-                        )}
+                        <Text className="text-sm font-sans-medium text-muted-foreground">{email}</Text>
                     </View>
                 </View>
             </View>
@@ -52,25 +37,25 @@ const Settings = () => {
                 <View className="gap-2">
                     <View className="flex-row justify-between items-center py-2">
                         <Text className="text-sm font-sans-medium text-muted-foreground">Account ID</Text>
-                        <Text className="text-sm font-sans-medium text-primary" numberOfLines={1} ellipsizeMode="tail">
-                            {user?.id?.substring(0, 20)}...
+                        <Text className="text-sm font-sans-medium text-primary">
+                            N/A
                         </Text>
                     </View>
                     <View className="flex-row justify-between items-center py-2">
                         <Text className="text-sm font-sans-medium text-muted-foreground">Joined</Text>
                         <Text className="text-sm font-sans-medium text-primary">
-                            {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                            N/A
                         </Text>
                     </View>
                 </View>
             </View>
 
-            {/* Sign Out Button */}
+            {/* Optional Button (no auth) */}
             <Pressable
-                className="auth-button bg-destructive"
-                onPress={handleSignOut}
+                className="auth-button bg-primary"
+                onPress={() => posthog.capture('settings_button_clicked')}
             >
-                <Text className="auth-button-text text-white">Sign Out</Text>
+                <Text className="auth-button-text text-white">Continue</Text>
             </Pressable>
         </SafeAreaView>
     )
