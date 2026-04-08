@@ -18,7 +18,7 @@ import { router } from "expo-router";
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
-  const posthog = usePostHog();
+  
 
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -57,22 +57,12 @@ export default function App() {
       currentId === item.id ? null : item.id
     );
 
-    posthog.capture(
-      isExpanding ? 'subscription_expanded' : 'subscription_collapsed',
-      {
-        subscription_name: item.name ?? "unknown",
-        subscription_id: item.id,
-      }
-    );
+    
   };
 
   const handleCreateSubscription = (newSubscription: Subscription) => {
     addSubscription(newSubscription);
 
-    posthog.capture('subscription_created', {
-      subscription_name: newSubscription.name,
-      subscription_price: newSubscription.price,
-    });
   };
 
   return (
