@@ -2,7 +2,6 @@ import "@/global.css";
 import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { styled } from "nativewind";
-import images from "@/constants/images";
 import { HOME_BALANCE } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import { formatCurrency } from "@/lib/utils";
@@ -23,8 +22,28 @@ export default function App() {
 
   const [user, setUser] = useState<any>(null);
   const [displayName, setDisplayName] = useState("Guest");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // 🔥 FETCH EVERYTHING
+  // 🔥 FETCH PROFILE (NAME + AVATAR)
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("name, avatar_url")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.log("Profile fetch error:", error);
+      return;
+    }
+
+    if (data) {
+      setDisplayName(data.name || "User");
+      setAvatarUrl(data.avatar_url);
+    }
+  };
+
+  // 🔥 FETCH SUBSCRIPTIONS
   const fetchSubscriptions = async () => {
     const { data, error } = await supabase
       .from("subscriptions")
@@ -60,20 +79,34 @@ export default function App() {
     }
   };
 
+  // 🔥 AUTH + INITIAL FETCH
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      const currentUser = data.session?.user ?? null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        fetchProfile(currentUser.id); // 🔥 load profile
+      }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          fetchProfile(currentUser.id);
+        }
+      }
+    );
 
     fetchSubscriptions();
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // 🔥 UPCOMING LOGIC (UNCHANGED)
   const upcomingSubscriptions = useMemo(() => {
     const now = dayjs();
     const nextWeek = now.add(7, "days");
@@ -108,11 +141,24 @@ export default function App() {
       <FlatList
         ListHeaderComponent={() => (
           <>
-            {/* HEADER */}
+            {/* 🔥 HEADER */}
             <View className="home-header">
               <View className="home-user">
-                <Image source={images.avatar} className="home-avatar" />
-                <Text className="home-user-name">{displayName}</Text>
+
+                {/* 🔥 PROFILE IMAGE */}
+                <Image
+                  source={
+                    avatarUrl
+                      ? { uri: avatarUrl }
+                      : require("@/assets/images/fallback.png")
+                  }
+                  className="home-avatar"
+                />
+
+                {/* 🔥 NAME FROM DB */}
+                <Text className="home-user-name">
+                  {displayName}
+                </Text>
               </View>
 
               <Pressable onPress={() => setIsModalVisible(true)}>
@@ -176,7 +222,7 @@ export default function App() {
         visible={isModalVisible}
         onClose={() => {
           setIsModalVisible(false);
-          fetchSubscriptions(); // 🔥 refresh
+          fetchSubscriptions();
         }}
       />
     </SafeAreaView>
