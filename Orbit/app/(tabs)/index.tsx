@@ -1,4 +1,4 @@
-import "@/global.css"
+import "@/global.css";
 import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { styled } from "nativewind";
@@ -6,80 +6,101 @@ import images from "@/constants/images";
 import { HOME_BALANCE } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import { formatCurrency } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-
 import dayjs from "dayjs";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
-import { useState, useMemo } from "react";
-import { useSubscriptionStore } from "@/lib/subscriptionStore";
 import { router } from "expo-router";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
-
-
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const { subscriptions, addSubscription } = useSubscriptionStore();
 
   const [user, setUser] = useState<any>(null);
   const [displayName, setDisplayName] = useState("Guest");
 
+  // 🔥 FETCH EVERYTHING
+  const fetchSubscriptions = async () => {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select(`
+        id,
+        price,
+        currency,
+        renewal_date,
+        status,
+        apps (
+          name,
+          icon
+        )
+      `);
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    if (data) {
+      const formatted = data.map((item: any) => ({
+        id: item.id,
+        name: item.apps?.name,
+        icon: item.apps?.icon,
+        price: item.price,
+        currency: item.currency,
+        renewalDate: item.renewal_date,
+        status: item.status,
+      }));
+
+      setSubscriptions(formatted);
+    }
+  };
+
   useEffect(() => {
-    // get current session
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
     });
 
-    // listen to auth changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
+    fetchSubscriptions();
+
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const upcomingSubscriptions: UpcomingSubscription[] = useMemo(() => {
+  const upcomingSubscriptions = useMemo(() => {
     const now = dayjs();
-    const nextWeek = now.add(7, 'days');
+    const nextWeek = now.add(7, "days");
 
     return subscriptions
-      .filter(sub =>
-        sub?.status === 'active' &&
-        sub?.renewalDate &&
-        dayjs(sub.renewalDate).isAfter(now) &&
-        dayjs(sub.renewalDate).isBefore(nextWeek)
+      .filter(
+        (sub) =>
+          sub?.status === "active" &&
+          sub?.renewalDate &&
+          dayjs(sub.renewalDate).isAfter(now) &&
+          dayjs(sub.renewalDate).isBefore(nextWeek)
       )
-      .map(sub => ({
+      .map((sub) => ({
         id: sub.id,
         icon: sub.icon,
         name: sub.name,
         price: sub.price,
         currency: sub.currency,
-        daysLeft: dayjs(sub.renewalDate!).diff(now, 'day'),
+        daysLeft: dayjs(sub.renewalDate).diff(now, "day"),
       }))
       .sort((a, b) => a.daysLeft - b.daysLeft);
   }, [subscriptions]);
 
-  const handleSubscriptionPress = (item: Subscription) => {
-    if (!item?.id) return;
-
-    const isExpanding = expandedSubscriptionId !== item.id;
-
-    setExpandedSubscriptionId((currentId) =>
-      currentId === item.id ? null : item.id
+  const handleSubscriptionPress = (item: any) => {
+    setExpandedSubscriptionId((prev) =>
+      prev === item.id ? null : item.id
     );
-
-
-  };
-
-  const handleCreateSubscription = (newSubscription: Subscription) => {
-    addSubscription(newSubscription);
-
   };
 
   return (
@@ -108,16 +129,14 @@ export default function App() {
                   {formatCurrency(HOME_BALANCE.amount)}
                 </Text>
                 <Text className="home-balance-date">
-                  {dayjs(HOME_BALANCE.nextRenewalDate).format('MM/DD')}
+                  {dayjs(HOME_BALANCE.nextRenewalDate).format("MM/DD")}
                 </Text>
               </View>
             </View>
 
             {/* UPCOMING */}
             <View className="mb-5">
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-lg font-bold">Upcoming</Text>
-              </View>
+              <Text className="text-lg font-bold mb-2">Upcoming</Text>
 
               <FlatList
                 data={upcomingSubscriptions}
@@ -130,10 +149,9 @@ export default function App() {
               />
             </View>
 
-            {/* ALL SUBSCRIPTIONS + VIEW ALL */}
-            <View className="flex-row justify-between items-center mb-2">
+            {/* ALL */}
+            <View className="flex-row justify-between mb-2">
               <Text className="text-lg font-bold">All Subscriptions</Text>
-
               <Pressable onPress={() => router.push("/subscriptions")}>
                 <Text className="text-primary">View All</Text>
               </Pressable>
@@ -149,16 +167,17 @@ export default function App() {
             onPress={() => handleSubscriptionPress(item)}
           />
         )}
-        extraData={expandedSubscriptionId}
         ItemSeparatorComponent={() => <View className="h-4" />}
-        showsVerticalScrollIndicator={false}
         contentContainerClassName="pb-30"
       />
 
+      {/* 🔥 MODAL */}
       <CreateSubscriptionModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onSubmit={handleCreateSubscription}
+        onClose={() => {
+          setIsModalVisible(false);
+          fetchSubscriptions(); // 🔥 refresh
+        }}
       />
     </SafeAreaView>
   );
