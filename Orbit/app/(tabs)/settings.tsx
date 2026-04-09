@@ -2,17 +2,25 @@ import { Text, View, Pressable, Image } from 'react-native'
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { styled } from "nativewind";
 import images from '@/constants/images';
-import { usePostHog } from 'posthog-react-native';
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/providers/AuthProvider";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 const Settings = () => {
-    const posthog = usePostHog();
 
-    // 👇 Static fallback user
-    const displayName = "Guest User";
-    const email = "guest@example.com";
 
+    const { user } = useAuth();
+
+    const displayName = user?.user_metadata?.name || "User";
+    const email = user?.email || "";
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+            console.log("Logout error:", error.message);
+        }
+    };
     return (
         <SafeAreaView className="flex-1 bg-background p-5">
             <Text className="text-3xl font-sans-bold text-primary mb-6">Settings</Text>
@@ -50,12 +58,11 @@ const Settings = () => {
                 </View>
             </View>
 
-            {/* Optional Button (no auth) */}
             <Pressable
-                className="auth-button bg-primary"
-                onPress={() => posthog.capture('settings_button_clicked')}
+                className="auth-button bg-red-500"
+                onPress={handleLogout}
             >
-                <Text className="auth-button-text text-white">Continue</Text>
+                <Text className="auth-button-text text-white">Logout</Text>
             </Pressable>
         </SafeAreaView>
     )

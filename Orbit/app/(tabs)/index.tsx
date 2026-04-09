@@ -6,25 +6,42 @@ import images from "@/constants/images";
 import { HOME_BALANCE } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import { formatCurrency } from "@/lib/utils";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+
 import dayjs from "dayjs";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import { useState, useMemo } from "react";
-import { usePostHog } from 'posthog-react-native';
 import { useSubscriptionStore } from "@/lib/subscriptionStore";
 import { router } from "expo-router";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
-  
+
 
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { subscriptions, addSubscription } = useSubscriptionStore();
 
-  const displayName = "Guest";
+  const [user, setUser] = useState<any>(null);
+  const [displayName, setDisplayName] = useState("Guest");
+
+  useEffect(() => {
+    // get current session
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+
+    // listen to auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const upcomingSubscriptions: UpcomingSubscription[] = useMemo(() => {
     const now = dayjs();
@@ -57,7 +74,7 @@ export default function App() {
       currentId === item.id ? null : item.id
     );
 
-    
+
   };
 
   const handleCreateSubscription = (newSubscription: Subscription) => {

@@ -17,6 +17,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/material-top-tabs": "^7.4.23",
     "@react-navigation/native": "^7.1.8",
+    "@supabase/supabase-js": "^2.103.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
     "expo": "~54.0.33",
