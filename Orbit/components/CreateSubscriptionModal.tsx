@@ -25,11 +25,9 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
   const [price, setPrice] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("Monthly");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
-
   const [apps, setApps] = useState<any[]>([]);
   const [selectedApp, setSelectedApp] = useState<any>(null);
 
-  // 🔥 Fetch apps
   useEffect(() => {
     const fetchApps = async () => {
       const { data } = await supabase.from("apps").select("*");
@@ -47,41 +45,26 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
 
   const handleSubmit = async () => {
     if (!isValidForm) return;
-
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
     const priceValue = Number(price.trim());
     const now = dayjs();
-
-    const renewalDate =
-      frequency === "Monthly"
-        ? now.add(1, "month")
-        : now.add(1, "year");
+    const renewalDate = frequency === "Monthly" ? now.add(1, "month") : now.add(1, "year");
 
     const { error } = await supabase.from("subscriptions").insert([
       {
         user_id: userData.user.id,
         app_id: selectedApp.id,
-
-        // 💰 PRICING
         price: priceValue,
         currency: "INR",
         billing_cycle: frequency.toLowerCase(),
-
-        // 📅 DATES
         start_date: now.toISOString(),
         renewal_date: renewalDate.toISOString(),
         last_charged_date: now.toISOString(),
-
-        // 💳 PAYMENT
         payment_method: paymentMethod,
-
-        // ⚙️ SETTINGS
         auto_renew: true,
         reminder_days_before: 2,
-
-        // 📊 STATUS
         status: "active",
         is_deleted: false,
       },
@@ -113,124 +96,138 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
     <Modal visible={visible} transparent animationType="slide">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
+        className="flex-1 justify-end bg-black/80"
       >
-        <Pressable className="modal-overlay" onPress={onClose}>
-          <Pressable
-            className="modal-container"
-            onPress={(e) => e.stopPropagation()}
-          >
-            {/* HEADER */}
-            <View className="modal-header">
-              <Text className="modal-title">New Subscription</Text>
-              <Pressable onPress={onClose}>
-                <Text>✕</Text>
-              </Pressable>
+        <Pressable className="absolute inset-0" onPress={onClose} />
+        
+        {/* MAIN CONTAINER: Pure Black for OLED */}
+        <View className="bg-black rounded-t-[40px] p-6 pb-12 border-t border-white/10 shadow-2xl">
+          
+          {/* DRAG INDICATOR */}
+          <View className="w-12 h-1.5 bg-neutral-800 rounded-full self-center mb-8" />
+
+          {/* HEADER */}
+          <View className="flex-row justify-between items-center mb-8">
+            <View>
+              <Text className="text-2xl font-bold text-white tracking-tight">Add Subscription</Text>
+              <Text className="text-neutral-500 text-sm mt-0.5">Track your recurring expenses</Text>
+            </View>
+            <Pressable 
+              onPress={onClose} 
+              className="bg-neutral-900 w-10 h-10 items-center justify-center rounded-full active:bg-neutral-800"
+            >
+              <Text className="text-neutral-400 font-bold text-lg">✕</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 28 }}>
+            
+            {/* APP PICKER */}
+            <View>
+              <Text className="text-[11px] font-bold text-neutral-500 mb-4 uppercase tracking-[2px]">Select Service</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
+                {apps.map((app) => (
+                  <Pressable
+                    key={app.id}
+                    onPress={() => setSelectedApp(app)}
+                    className={clsx(
+                      "mx-2 px-6 py-3.5 rounded-2xl border transition-all",
+                      selectedApp?.id === app.id
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-neutral-800 bg-neutral-900/50"
+                    )}
+                  >
+                    <Text className={clsx(
+                      "font-semibold text-sm",
+                      selectedApp?.id === app.id ? "text-blue-400" : "text-neutral-400"
+                    )}>
+                      {app.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
 
-            <ScrollView className="p-5" contentContainerStyle={{ gap: 20 }}>
-
-              {/* 🔥 APP PICKER */}
-              <View>
-                <Text>Select App</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {apps.map((app) => (
-                    <Pressable
-                      key={app.id}
-                      onPress={() => setSelectedApp(app)}
-                      className={clsx(
-                        "mr-3 p-3 rounded-xl border",
-                        selectedApp?.id === app.id
-                          ? "border-blue-500"
-                          : "border-gray-300"
-                      )}
-                    >
-                      <Text>{app.name}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* 💰 PRICE */}
-              <View>
-                <Text>Price</Text>
+            {/* PRICE INPUT */}
+            <View>
+              <Text className="text-[11px] font-bold text-neutral-500 mb-4 uppercase tracking-[2px]">Price (INR)</Text>
+              <View className="flex-row items-center bg-neutral-900 border border-neutral-800 rounded-2xl px-5 h-16">
+                <Text className="text-xl text-neutral-600 font-medium mr-2">₹</Text>
                 <TextInput
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
-                  placeholder="Enter price"
-                  className="border p-3 rounded"
+                  placeholder="0.00"
+                  placeholderTextColor="#404040"
+                  className="flex-1 text-xl font-bold text-white"
+                  selectionColor="#3b82f6"
                 />
               </View>
+            </View>
 
-              {/* 🔁 FREQUENCY */}
-              <View>
-                <Text>Billing Cycle</Text>
-                <View className="flex-row gap-5 mt-2">
-                  <Pressable onPress={() => setFrequency("Monthly")}>
-                    <Text
+            {/* SEGMENTED CONTROLS */}
+            <View className="flex-row gap-5">
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold text-neutral-500 mb-4 uppercase tracking-[2px]">Billing</Text>
+                <View className="flex-row bg-neutral-900 p-1.5 rounded-2xl border border-neutral-800">
+                  {["Monthly", "Yearly"].map((item) => (
+                    <Pressable
+                      key={item}
+                      onPress={() => setFrequency(item as Frequency)}
                       className={clsx(
-                        frequency === "Monthly" && "text-blue-500 font-semibold"
+                        "flex-1 py-2.5 rounded-xl items-center",
+                        frequency === item ? "bg-neutral-800 shadow-sm" : "bg-transparent"
                       )}
                     >
-                      Monthly
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={() => setFrequency("Yearly")}>
-                    <Text
-                      className={clsx(
-                        frequency === "Yearly" && "text-blue-500 font-semibold"
-                      )}
-                    >
-                      Yearly
-                    </Text>
-                  </Pressable>
+                      <Text className={clsx("text-xs font-bold", frequency === item ? "text-blue-400" : "text-neutral-500")}>
+                        {item}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
 
-              {/* 💳 PAYMENT METHOD */}
-              <View>
-                <Text>Payment Method</Text>
-                <View className="flex-row gap-5 mt-2">
-                  <Pressable onPress={() => setPaymentMethod("UPI")}>
-                    <Text
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold text-neutral-500 mb-4 uppercase tracking-[2px]">Method</Text>
+                <View className="flex-row bg-neutral-900 p-1.5 rounded-2xl border border-neutral-800">
+                  {["UPI", "Card"].map((item) => (
+                    <Pressable
+                      key={item}
+                      onPress={() => setPaymentMethod(item)}
                       className={clsx(
-                        paymentMethod === "UPI" && "text-blue-500 font-semibold"
+                        "flex-1 py-2.5 rounded-xl items-center",
+                        paymentMethod === item ? "bg-neutral-800 shadow-sm" : "bg-transparent"
                       )}
                     >
-                      UPI
-                    </Text>
-                  </Pressable>
-
-                  <Pressable onPress={() => setPaymentMethod("Card")}>
-                    <Text
-                      className={clsx(
-                        paymentMethod === "Card" && "text-blue-500 font-semibold"
-                      )}
-                    >
-                      Card
-                    </Text>
-                  </Pressable>
+                      <Text className={clsx("text-xs font-bold", paymentMethod === item ? "text-blue-400" : "text-neutral-500")}>
+                        {item}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </View>
               </View>
+            </View>
 
-              {/* 🚀 SUBMIT BUTTON */}
-              <Pressable
-                onPress={handleSubmit}
-                disabled={!isValidForm}
-                className={clsx(
-                  "p-3 rounded-xl",
-                  isValidForm ? "bg-blue-500" : "bg-gray-400"
-                )}
-              >
-                <Text className="text-white text-center font-semibold">
-                  Create Subscription
-                </Text>
-              </Pressable>
+            {/* SUBMIT BUTTON */}
+            <Pressable
+              onPress={handleSubmit}
+              disabled={!isValidForm}
+              style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+              className={clsx(
+                "py-5 rounded-2xl mt-4 shadow-xl",
+                isValidForm ? "bg-blue-600 shadow-blue-900/40" : "bg-neutral-800 opacity-50"
+              )}
+            >
+              <Text className={clsx(
+                "text-center font-black text-base uppercase tracking-widest",
+                isValidForm ? "text-white" : "text-neutral-500"
+              )}>
+                Save Subscription
+              </Text>
+            </Pressable>
 
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+          </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
