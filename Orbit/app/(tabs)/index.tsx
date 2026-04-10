@@ -24,7 +24,7 @@ export default function App() {
   const [displayName, setDisplayName] = useState("Guest");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // 🔥 FETCH PROFILE (NAME + AVATAR)
+  // 🔥 FETCH PROFILE
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -43,21 +43,30 @@ export default function App() {
     }
   };
 
-  // 🔥 FETCH SUBSCRIPTIONS
+  // 🔥 FETCH SUBSCRIPTIONS (UPDATED)
   const fetchSubscriptions = async () => {
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("subscriptions")
       .select(`
         id,
         price,
         currency,
+        billing_cycle,
         renewal_date,
+        start_date,
+        payment_method,
         status,
+        auto_renew,
+        is_deleted,
         apps (
           name,
           icon
         )
-      `);
+      `)
+      .eq("user_id", user.id)
+      .eq("is_deleted", false);
 
     if (error) {
       console.log(error);
@@ -71,17 +80,23 @@ export default function App() {
         icon: item.apps?.icon,
         price: item.price,
         currency: item.currency,
+        billing: item.billing_cycle,
         renewalDate: item.renewal_date,
+        startDate: item.start_date,
+        paymentMethod: item.payment_method,
+        autoRenew: item.auto_renew,
         status: item.status,
       }));
 
       setSubscriptions(formatted);
     }
   };
+
+  // 🔥 SOFT DELETE
   const deleteSubscription = async (id: string) => {
     const { error } = await supabase
       .from("subscriptions")
-      .delete()
+      .update({ is_deleted: true })
       .eq("id", id);
 
     if (error) {
@@ -89,17 +104,17 @@ export default function App() {
       return;
     }
 
-    fetchSubscriptions(); // refresh UI
+    fetchSubscriptions();
   };
 
-  // 🔥 AUTH + INITIAL FETCH
+  // 🔥 AUTH + PROFILE
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       const currentUser = data.session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        fetchProfile(currentUser.id); // 🔥 load profile
+        fetchProfile(currentUser.id);
       }
     });
 
@@ -114,12 +129,17 @@ export default function App() {
       }
     );
 
-    fetchSubscriptions();
-
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // 🔥 UPCOMING LOGIC (UNCHANGED)
+  // 🔥 FETCH WHEN USER READY
+  useEffect(() => {
+    if (user) {
+      fetchSubscriptions();
+    }
+  }, [user]);
+
+  // 🔥 UPCOMING
   const upcomingSubscriptions = useMemo(() => {
     const now = dayjs();
     const nextWeek = now.add(7, "days");
@@ -154,11 +174,9 @@ export default function App() {
       <FlatList
         ListHeaderComponent={() => (
           <>
-            {/* 🔥 HEADER */}
+            {/* HEADER */}
             <View className="home-header">
               <View className="home-user">
-
-                {/* 🔥 PROFILE IMAGE */}
                 <Image
                   source={
                     avatarUrl
@@ -168,7 +186,6 @@ export default function App() {
                   className="home-avatar"
                 />
 
-                {/* 🔥 NAME FROM DB */}
                 <Text className="home-user-name">
                   {displayName}
                 </Text>
@@ -224,14 +241,14 @@ export default function App() {
             {...item}
             expanded={expandedSubscriptionId === item.id}
             onPress={() => handleSubscriptionPress(item)}
-             onDelete={() => deleteSubscription(item.id)}
+            onDelete={() => deleteSubscription(item.id)}
           />
         )}
         ItemSeparatorComponent={() => <View className="h-4" />}
         contentContainerClassName="pb-30"
       />
 
-      {/* 🔥 MODAL */}
+      {/* MODAL */}
       <CreateSubscriptionModal
         visible={isModalVisible}
         onClose={() => {

@@ -12,7 +12,7 @@ interface SubscriptionCardProps {
   price: number;
   currency?: string;
   icon?: string;
-  billing?: string;
+  billing?: string; // 🔥 from billing_cycle
   color?: string;
   category?: string;
   plan?: string;
@@ -23,7 +23,9 @@ interface SubscriptionCardProps {
   startDate?: string;
   status?: string;
 
-  // ✅ delete handler
+  // ✅ new optional fields (future ready)
+  autoRenew?: boolean;
+
   onDelete?: () => void;
 }
 
@@ -42,6 +44,7 @@ const SubscriptionCard = ({
   paymentMethod,
   startDate,
   status,
+  autoRenew,
   onDelete,
 }: SubscriptionCardProps) => {
 
@@ -76,11 +79,12 @@ const SubscriptionCard = ({
                 {name}
               </Text>
 
+              {/* 🔥 IMPROVED META */}
               <Text numberOfLines={1} className="sub-meta">
                 {category?.trim() ||
                   plan?.trim() ||
                   (renewalDate
-                    ? formatSubscriptionDateTime(renewalDate)
+                    ? `Renews ${formatSubscriptionDateTime(renewalDate)}`
                     : "")}
               </Text>
             </View>
@@ -90,7 +94,11 @@ const SubscriptionCard = ({
             <Text className="sub-price">
               {formatCurrency(price, currency)}
             </Text>
-            <Text className="sub-billing">{billing}</Text>
+
+            {/* 🔥 BETTER BILLING DISPLAY */}
+            <Text className="sub-billing">
+              {billing ? `/${billing}` : ""}
+            </Text>
           </View>
         </View>
 
@@ -110,9 +118,9 @@ const SubscriptionCard = ({
 
               <View className="sub-row">
                 <View className="sub-row-copy">
-                  <Text className="sub-label">Category:</Text>
+                  <Text className="sub-label">Billing:</Text>
                   <Text className="sub-value">
-                    {(category?.trim() || plan?.trim()) ?? "Not provided"}
+                    {billing ?? "Not provided"}
                   </Text>
                 </View>
               </View>
@@ -130,7 +138,7 @@ const SubscriptionCard = ({
 
               <View className="sub-row">
                 <View className="sub-row-copy">
-                  <Text className="sub-label">Renewal date:</Text>
+                  <Text className="sub-label">Renewal:</Text>
                   <Text className="sub-value">
                     {renewalDate
                       ? formatSubscriptionDateTime(renewalDate)
@@ -138,6 +146,18 @@ const SubscriptionCard = ({
                   </Text>
                 </View>
               </View>
+
+              {/* 🔥 NEW FIELD */}
+              {autoRenew !== undefined && (
+                <View className="sub-row">
+                  <View className="sub-row-copy">
+                    <Text className="sub-label">Auto Renew:</Text>
+                    <Text className="sub-value">
+                      {autoRenew ? "Yes" : "No"}
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               <View className="sub-row">
                 <View className="sub-row-copy">
@@ -169,10 +189,8 @@ const SubscriptionCard = ({
       {showDeleteModal && (
         <View className="absolute inset-0 justify-center items-center z-50">
 
-          {/* BACKGROUND BLUR */}
           <View className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-          {/* POPUP */}
           <View className="w-[85%] bg-card rounded-2xl p-5 shadow-xl">
 
             <Text className="text-lg font-bold text-center mb-2">
@@ -180,12 +198,11 @@ const SubscriptionCard = ({
             </Text>
 
             <Text className="text-center mb-5">
-              Are you sure you want to delete this subscription?
+              This will remove it from your dashboard.
             </Text>
 
             <View className="flex-row gap-3">
 
-              {/* CANCEL */}
               <Pressable
                 onPress={() => setShowDeleteModal(false)}
                 className="flex-1 bg-muted py-3 rounded-xl"
@@ -195,7 +212,6 @@ const SubscriptionCard = ({
                 </Text>
               </Pressable>
 
-              {/* DELETE */}
               <Pressable
                 onPress={() => {
                   setShowDeleteModal(false);

@@ -24,6 +24,7 @@ type Frequency = "Monthly" | "Yearly";
 const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
   const [price, setPrice] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("Monthly");
+  const [paymentMethod, setPaymentMethod] = useState("UPI");
 
   const [apps, setApps] = useState<any[]>([]);
   const [selectedApp, setSelectedApp] = useState<any>(null);
@@ -62,15 +63,32 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
       {
         user_id: userData.user.id,
         app_id: selectedApp.id,
+
+        // 💰 PRICING
         price: priceValue,
+        currency: "INR",
         billing_cycle: frequency.toLowerCase(),
+
+        // 📅 DATES
+        start_date: now.toISOString(),
         renewal_date: renewalDate.toISOString(),
+        last_charged_date: now.toISOString(),
+
+        // 💳 PAYMENT
+        payment_method: paymentMethod,
+
+        // ⚙️ SETTINGS
+        auto_renew: true,
+        reminder_days_before: 2,
+
+        // 📊 STATUS
         status: "active",
+        is_deleted: false,
       },
     ]);
 
     if (error) {
-      console.log(error);
+      console.log("Insert error:", error);
       return;
     }
 
@@ -88,6 +106,7 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
     setPrice("");
     setFrequency("Monthly");
     setSelectedApp(null);
+    setPaymentMethod("UPI");
   };
 
   return (
@@ -101,6 +120,7 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
             className="modal-container"
             onPress={(e) => e.stopPropagation()}
           >
+            {/* HEADER */}
             <View className="modal-header">
               <Text className="modal-title">New Subscription</Text>
               <Pressable onPress={onClose}>
@@ -131,25 +151,26 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
                 </ScrollView>
               </View>
 
-              {/* PRICE */}
+              {/* 💰 PRICE */}
               <View>
                 <Text>Price</Text>
                 <TextInput
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
+                  placeholder="Enter price"
                   className="border p-3 rounded"
                 />
               </View>
 
-              {/* FREQUENCY */}
+              {/* 🔁 FREQUENCY */}
               <View>
-                <Text>Frequency</Text>
+                <Text>Billing Cycle</Text>
                 <View className="flex-row gap-5 mt-2">
                   <Pressable onPress={() => setFrequency("Monthly")}>
                     <Text
                       className={clsx(
-                        frequency === "Monthly" && "text-blue-500"
+                        frequency === "Monthly" && "text-blue-500 font-semibold"
                       )}
                     >
                       Monthly
@@ -158,7 +179,7 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
                   <Pressable onPress={() => setFrequency("Yearly")}>
                     <Text
                       className={clsx(
-                        frequency === "Yearly" && "text-blue-500"
+                        frequency === "Yearly" && "text-blue-500 font-semibold"
                       )}
                     >
                       Yearly
@@ -167,16 +188,42 @@ const CreateSubscriptionModal = ({ visible, onClose }: Props) => {
                 </View>
               </View>
 
-              {/* BUTTON */}
+              {/* 💳 PAYMENT METHOD */}
+              <View>
+                <Text>Payment Method</Text>
+                <View className="flex-row gap-5 mt-2">
+                  <Pressable onPress={() => setPaymentMethod("UPI")}>
+                    <Text
+                      className={clsx(
+                        paymentMethod === "UPI" && "text-blue-500 font-semibold"
+                      )}
+                    >
+                      UPI
+                    </Text>
+                  </Pressable>
+
+                  <Pressable onPress={() => setPaymentMethod("Card")}>
+                    <Text
+                      className={clsx(
+                        paymentMethod === "Card" && "text-blue-500 font-semibold"
+                      )}
+                    >
+                      Card
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 🚀 SUBMIT BUTTON */}
               <Pressable
                 onPress={handleSubmit}
                 disabled={!isValidForm}
                 className={clsx(
-                  "p-3 rounded",
+                  "p-3 rounded-xl",
                   isValidForm ? "bg-blue-500" : "bg-gray-400"
                 )}
               >
-                <Text className="text-white text-center">
+                <Text className="text-white text-center font-semibold">
                   Create Subscription
                 </Text>
               </Pressable>
