@@ -78,6 +78,19 @@ export default function App() {
       setSubscriptions(formatted);
     }
   };
+  const deleteSubscription = async (id: string) => {
+    const { error } = await supabase
+      .from("subscriptions")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.log("Delete error:", error);
+      return;
+    }
+
+    fetchSubscriptions(); // refresh UI
+  };
 
   // 🔥 AUTH + INITIAL FETCH
   useEffect(() => {
@@ -211,6 +224,7 @@ export default function App() {
             {...item}
             expanded={expandedSubscriptionId === item.id}
             onPress={() => handleSubscriptionPress(item)}
+             onDelete={() => deleteSubscription(item.id)}
           />
         )}
         ItemSeparatorComponent={() => <View className="h-4" />}
